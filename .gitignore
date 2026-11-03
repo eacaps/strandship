@@ -1,0 +1,17 @@
+# Root-level ignores for the strandship project.
+# The agent/ and infra/ subfolders have their own .gitignore for
+# toolchain-specific artifacts (Python .venv, node_modules, cdk.out, etc.).
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Environment / secrets — never commit these
+.env
+.env.*
+*.pem
+*.key

@@ -1,0 +1,107 @@
+name: strandship
+
+# Trigger on PRs. `pull_request` (not `pull_request_target`) means that for PRs
+# from forks the workflow runs WITHOUT access to secrets and cannot assume the
+# AWS role — only trusted PRs (same-repo branches) get a review. This is the
+# safe default for a personal project. See the README for the fork trade-off.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Least-privilege workflow permissions:
+# - id-token: write   -> required to request the GitHub OIDC token for AWS.
+# - pull-requests: write -> required to post the review comment.
+# - contents: read    -> required to check out and explore the code.
+permissions:
+  id-token: write
+  pull-requests: write
+  contents: read
+
+# Cancel an in-flight review if the PR is updated again, and prevent parallel
+# runs stacking up on rapid pushes (cost/abuse backstop).
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # Gate the job on two conditions, ANDed:
+    #
+    # 1. head.repo.fork == false  — the PR branch lives in THIS repo, not a
+    #    fork. This is the real guardrail and it fixes the `author_association`
+    #    footgun: `fork` is an immutable property of the PR, whereas
+    #    `author_association` is a mutable, self-reported payload field that can
+    #    report a trusted value for an outside contributor's PR after a member
+    #    interacts with it (so a later `synchronize` of the contributor's commits
+    #    could otherwise slip through). A same-repo-branch PR is also the only
+    #    thing that can assume the AWS role at all (fork PRs on `pull_request`
+    #    get no secrets), so this keeps the trigger aligned with what can
+    #    actually run the agent.
+    #
+    # 2. author_association in {OWNER, MEMBER, COLLABORATOR} — a secondary
+    #    ABUSE/COST backstop only, NOT a trust boundary. It keeps the runner from
+    #    even starting for outside contributors. Do NOT treat this line as the
+    #    thing that makes prompt injection safe — the capability-constrained
+    #    agent (see README) is what does that. COLLABORATOR is included for
+    #    convenience; note it can be granted liberally, so it is weaker than
+    #    OWNER/MEMBER. A stronger per-identity abuse control (bucketed rate
+    #    limiting) is tracked in ENHANCEMENTS.md.
+    if: >-
+      github.event.pull_request.head.repo.fork == false &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+      github.event.pull_request.author_association)
+    steps:
+      - name: Check out the PR
+        # SHA-pinned (v4.4.0) — a tag can be moved by a compromised upstream; a
+        # commit SHA cannot. This job mints AWS credentials, so third-party
+        # actions are pinned to immutable SHAs. Bump the SHA + comment together.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Fetch full history so the agent can compute the merge-base diff.
+          fetch-depth: 0
+
+      - name: Set up uv
+        # SHA-pinned (v6.8.0) — see note on checkout above.
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          # Reuse uv's cache between runs for faster installs.
+          enable-cache: true
+
+      - name: Install dependencies
+        # Creates .venv from agent/pyproject.toml and the committed uv.lock.
+        # `--frozen` requires the lockfile to be present and up to date and
+        # forbids re-resolving: installs are reproducible and cannot silently
+        # float to a newly published (possibly compromised) release. If
+        # pyproject.toml changes without a matching `uv lock`, this step fails
+        # loudly rather than resolving fresh.
+        working-directory: agent
+        run: uv sync --frozen --python 3.12
+
+      # Exchange the GitHub OIDC token for short-lived AWS credentials by
+      # assuming the IAM role. No AWS access keys are stored anywhere.
+      - name: Configure AWS credentials (OIDC)
+        # SHA-pinned (v4.3.1) — see note on checkout above. This is the step
+        # that assumes the IAM role, so pinning it is the highest-value pin.
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_REVIEW_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Run AI reviewer
+        # Run from agent/ so uv resolves the Python project there. The agent
+        # itself explores GITHUB_WORKSPACE (the repo root), set below, so the
+        # working directory does not affect which code gets reviewed.
+        working-directory: agent
+        env:
+          # GITHUB_TOKEN is injected automatically and is short-lived + repo-scoped.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: origin/${{ github.event.pull_request.base.ref }}
+          BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'anthropic.claude-sonnet-4-20250514-v1:0' }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+          MAX_ITERATIONS: "25"
+          # Explicitly point the agent at the repo root (it defaults to this).
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        run: uv run python -m strandship.agent
