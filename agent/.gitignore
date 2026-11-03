@@ -1,0 +1,12 @@
+# Python virtual environment created by `uv sync`.
+.venv/
+
+# uv cache (if ever created in-tree).
+.uv/
+
+# Byte-compiled / cache files.
+__pycache__/
+*.py[cod]
+
+# NOTE: uv.lock is intentionally NOT ignored. It is committed so CI
+# (`uv sync --frozen`) installs reproducible, pinned dependency versions.

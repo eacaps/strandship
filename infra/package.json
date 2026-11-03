@@ -1,0 +1,30 @@
+{
+  "name": "strandship-infra",
+  "version": "0.1.0",
+  "description": "TypeScript CDK app: GitHub OIDC provider + least-privilege IAM role for the AI code reviewer",
+  "license": "Apache-2.0",
+  "bin": {
+    "strandship-infra": "bin/app.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "typecheck": "tsc --noEmit",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-bedrock": "^3.600.0",
+    "@types/aws-lambda": "^8.10.140",
+    "@types/node": "^20.14.0",
+    "aws-cdk": "^2.150.0",
+    "esbuild": "^0.23.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.150.0",
+    "constructs": "^10.3.0",
+    "source-map-support": "^0.5.21"
+  }
+}
