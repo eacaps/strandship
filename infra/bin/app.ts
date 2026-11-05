@@ -9,7 +9,6 @@ const app = new App();
 // Configuration comes from CDK context. Pass on the CLI, e.g.:
 //   cdk deploy --all \
 //     -c githubOwner=my-user \
-//     -c githubRepo='*' \
 //     -c bedrockModelIds=anthropic.claude-sonnet-5-5
 // or set defaults in cdk.json under "context".
 //
@@ -19,7 +18,6 @@ const app = new App();
 // no ARN hunting. Advanced: pass `bedrockModelArns` to override the derived
 // invoke ARNs for a custom inference profile.
 const githubOwner = app.node.tryGetContext('githubOwner');
-const githubRepo = app.node.tryGetContext('githubRepo') ?? '*';
 const createOidcProvider =
   app.node.tryGetContext('createOidcProvider') !== 'false';
 const inferenceProfilePrefix = app.node.tryGetContext('inferenceProfilePrefix');
@@ -80,7 +78,6 @@ const env = {
 
 new ReviewerRoleStack(app, 'StrandshipRoleStack', {
   githubOwner,
-  githubRepo,
   bedrockModelId,
   bedrockModelArns,
   inferenceProfilePrefix,

@@ -325,8 +325,6 @@ def build_agent() -> Agent:
             fetch_conventions,
             post_review,
         ],
-        # Bound the agent loop to cap Bedrock cost on pathological PRs.
-        max_iterations=int(os.environ.get("MAX_ITERATIONS", "25")),
     )
 
 
@@ -334,9 +332,13 @@ def main() -> None:
     repo = os.environ.get("GITHUB_REPOSITORY", "(unknown repo)")
     pr_number = os.environ.get("PR_NUMBER", "(unknown PR)")
     agent = build_agent()
+    # Bound the agent loop to cap Bedrock cost on pathological PRs. In current
+    # Strands the loop cap is a per-invocation `limits`, not an Agent constructor
+    # arg: `turns` caps the number of agent loop turns (model call + tool use).
     agent(
         f"Review pull request #{pr_number} in repository {repo}. "
-        "Explore the codebase as needed, then post exactly one review."
+        "Explore the codebase as needed, then post exactly one review.",
+        limits={"turns": int(os.environ.get("MAX_ITERATIONS", "25"))},
     )
 
 

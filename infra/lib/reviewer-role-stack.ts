@@ -12,8 +12,6 @@ import { deriveBedrockArns } from './bedrock-arns';
 export interface ReviewerRoleStackProps extends StackProps {
   /** GitHub username or organisation that owns the repo(s). */
   readonly githubOwner: string;
-  /** Repository name allowed to assume the role. Use "*" for all your repos. */
-  readonly githubRepo: string;
   /**
    * BASE foundation-model id the reviewer invokes, e.g.
    * "anthropic.claude-sonnet-5-5" (NOT the "us."-prefixed profile).
@@ -50,7 +48,7 @@ export class ReviewerRoleStack extends Stack {
   constructor(scope: Construct, id: string, props: ReviewerRoleStackProps) {
     super(scope, id, props);
 
-    const { githubOwner, githubRepo } = props;
+    const { githubOwner } = props;
     const createOidcProvider = props.createOidcProvider ?? true;
 
     // Resolve the set of Bedrock ARNs the role may invoke.
@@ -92,28 +90,37 @@ export class ReviewerRoleStack extends Stack {
           `arn:aws:iam::${this.account}:oidc-provider/${githubDomain}`,
         );
 
-    // Trust only workflows from the configured repo(s). The `sub` condition is
-    // the key guardrail — it restricts which repository can assume the role.
+    // Trust only the owner's workflows. The `sub` condition is the guardrail — it
+    // pins the OWNER (the repo side is wildcarded — this deployment is owner-wide
+    // by design). GitHub has TWO subject formats and we accept both so adopters on
+    // any repo age work:
+    //   - legacy:    repo:<owner>/<repo>:<ref-or-event>
+    //   - immutable: repo:<owner>@<ownerId>/<repo>@<repoId>:<ref...>
+    //     (default for repos created/renamed after 2026-07-15). The `<owner>@`
+    //     anchor keeps the owner lock tight — `<owner>@*` matches `eacaps@8252280`
+    //     but NOT a different owner like `eacapsfoo`. A single `*` matches across
+    //     `:` and `/`, so the wildcards cover the owner id and the repo (+ its id).
     //
-    // The subject is pinned to the `pull_request` event (`...:pull_request`)
-    // rather than a wildcard (`...:*`). The reviewer only ever runs on the
-    // `pull_request` trigger, so this is a no-op for the current workflow but
-    // stops any OTHER event context in the matched repo(s) — a `push`,
-    // `workflow_dispatch`, a tag build, etc. — from assuming the role. This
-    // matters most when `githubRepo='*'`, where the repo side is already
-    // owner-wide.
-    //
-    // NOTE: if you ever add a non-PR trigger to review.yml (e.g.
-    // `workflow_dispatch`), that run's subject will NOT be `:pull_request` and
-    // STS will reject it — widen this condition deliberately if so. Pinning the
-    // workflow file itself via `job_workflow_ref` is the planned next step (see
-    // ENHANCEMENTS.md).
+    // The trailing `:pull_request` pins the trigger: only PR runs (not `push`,
+    // `workflow_dispatch`, tag builds, etc.) can assume the role. We pin it in the
+    // `sub` suffix rather than via an `event_name` condition because AWS does NOT
+    // support GitHub's custom OIDC claims (only `aud` and `sub`) as trust-policy
+    // condition keys — an `event_name` condition can never match and denies every
+    // assume. (Verified against this repo via CloudTrail: the PR run's sub ends in
+    // `:pull_request`.) Tightening further to THIS reviewer workflow via
+    // `job_workflow_ref` (needs review.yml as a reusable `workflow_call` workflow)
+    // is the planned next step — see ENHANCEMENTS.md.
     const principal = new iam.OpenIdConnectPrincipal(provider, {
       StringEquals: {
         [`${githubDomain}:aud`]: 'sts.amazonaws.com',
       },
       StringLike: {
-        [`${githubDomain}:sub`]: `repo:${githubOwner}/${githubRepo}:pull_request`,
+        [`${githubDomain}:sub`]: [
+          // legacy format: owner pinned exactly, repo wildcarded, PR trigger pinned
+          `repo:${githubOwner}/*:pull_request`,
+          // immutable format: owner name + @<ownerId>, repo wildcarded, PR trigger pinned
+          `repo:${githubOwner}@*/*:pull_request`,
+        ],
       },
     });
 

@@ -95,7 +95,6 @@ npm run bootstrap -- aws://<account-id>/<region>
 
 npx cdk deploy \
   -c githubOwner=<your-github-username> \
-  -c githubRepo='*' \
   -c bedrockModelIds=anthropic.claude-sonnet-5-5
 ```
 
@@ -139,7 +138,6 @@ ARNs and the access agreement, so there's nothing extra to specify:
 ```bash
 npx cdk deploy --all \
   -c githubOwner=<your-github-username> \
-  -c githubRepo='*' \
   -c bedrockModelIds=anthropic.claude-sonnet-5-5
 ```
 
@@ -270,11 +268,17 @@ The agent looks for `CONVENTIONS.md`, then `CONTRIBUTING.md`, then
   [`ENHANCEMENTS.md`](./ENHANCEMENTS.md).
 - **Leaked role ARN is low-risk** — `AWS_REVIEW_ROLE_ARN` is an identifier, not a
   credential. To assume the role a caller needs a GitHub OIDC token whose `sub`
-  matches `repo:<your-owner>/<repo>:pull_request`; a fork under someone else's
-  account produces a non-matching `sub`, so STS rejects it. The real lock is the
+  matches your owner (`repo:<your-owner>/...` or the immutable
+  `repo:<your-owner>@<owner-id>/...` form); a fork under someone else's account
+  produces a non-matching `sub`, so STS rejects it. The real lock is the
   **owner-scoped `sub` condition** in the trust policy — never wildcard the owner
-  side. The subject is also pinned to the `pull_request` event, so only PR runs
-  (not an arbitrary `push`/`workflow_dispatch` in a matched repo) can assume it.
+  side. Assumption is also pinned to the `pull_request` trigger via the `sub`
+  suffix, so only PR runs (not an arbitrary `push`/`workflow_dispatch` in a matched
+  repo) can assume it. (The pin lives in `sub`, not an `event_name` condition —
+  AWS trust policies can only condition on the `aud` and `sub` claims, not
+  GitHub's `event_name`.) Breadth is otherwise owner-wide (any repo under your
+  owner); tightening to *only this reviewer workflow* via `job_workflow_ref` is a
+  planned enhancement (see [`ENHANCEMENTS.md`](./ENHANCEMENTS.md)).
 - **Pinned supply chain** — third-party actions are pinned to immutable commit
   SHAs (not movable tags), and Python deps install with `uv sync --frozen` against
   a committed `uv.lock`, so a compromised upstream tag or a freshly published
