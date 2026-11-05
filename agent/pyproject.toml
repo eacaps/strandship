@@ -1,6 +1,6 @@
 [project]
 name = "strandship-agent"
-version = "0.1.0"
+version = "1.0.0"
 description = "AI code reviewer agent (GitHub Actions + OIDC variant) built on Strands Agents + Bedrock"
 license = "Apache-2.0"
 requires-python = ">=3.12"

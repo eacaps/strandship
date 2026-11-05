@@ -1,6 +1,6 @@
 {
   "name": "strandship-infra",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "TypeScript CDK app: GitHub OIDC provider + least-privilege IAM role for the AI code reviewer",
   "license": "Apache-2.0",
   "bin": {
