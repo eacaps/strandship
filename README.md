@@ -65,22 +65,49 @@ This app/infra language split is a common industry pattern: the language that
 
 ## Setup
 
+### Prerequisites
+
+Before the steps below, you need:
+
+- **AWS credentials** for the target account/region, with permission to create
+  IAM roles, an OIDC provider, and (for step 1b) Bedrock model-access agreements.
+  Sign in with `aws login` (or your usual profile/SSO), then verify:
+  ```bash
+  aws sts get-caller-identity   # should print your account id
+  aws configure get region      # or set AWS_REGION for the deploy
+  ```
+  The `cdk bootstrap`/`cdk deploy` commands below fail with a credentials/expired-
+  session error if this isn't set up first.
+- **Node.js 20+** and **npm** — for the CDK app in `infra/`.
+- **A GitHub repository** you own, where you'll add the workflow (steps 2–3).
+
+> The agent's own runtime (steps 2–3) needs `uv` and the `gh` CLI, but those run
+> inside GitHub Actions — you don't need them locally just to deploy the infra.
+
 ### 1. Deploy the OIDC provider + IAM role (once) — `infra/` (TypeScript CDK)
 
 ```bash
 cd infra
 npm install
 
-# First time in this account/region only:
-npx cdk bootstrap
+# First time in this account/region only (pass your account + region):
+npm run bootstrap -- aws://<account-id>/<region>
 
 npx cdk deploy \
   -c githubOwner=<your-github-username> \
   -c githubRepo='*' \
-  -c bedrockModelIds=anthropic.claude-sonnet-4-20250514-v1:0
+  -c bedrockModelIds=anthropic.claude-sonnet-5-5
 ```
 
 Copy the `RoleArn` output.
+
+> **Why `npm run bootstrap`?** It runs `cdk bootstrap --app ''`, which bootstraps
+> the environment *without* executing this CDK app. The app requires model/owner
+> context to synth, so a bare `cdk bootstrap` would fail asking for it —
+> bootstrapping is environment-level setup and doesn't need the app's context.
+> Because the app is skipped, CDK can't auto-detect the environment, so pass it
+> explicitly: `npm run bootstrap -- aws://<account-id>/<region>` (the `--`
+> forwards the argument through npm to the `cdk` command).
 
 > **One model id, no ARN hunting.** You pass the **base** model id
 > (`anthropic.claude-...`, no `us.` prefix) as `bedrockModelIds`. From it, and the
@@ -113,7 +140,7 @@ ARNs and the access agreement, so there's nothing extra to specify:
 npx cdk deploy --all \
   -c githubOwner=<your-github-username> \
   -c githubRepo='*' \
-  -c bedrockModelIds=anthropic.claude-sonnet-4-20250514-v1:0
+  -c bedrockModelIds=anthropic.claude-sonnet-5-5
 ```
 
 > **One model for now.** `bedrockModelIds` is plural (comma-separated) to reserve
@@ -166,12 +193,21 @@ provider prefix:
 
 ### 2. Configure the repo
 
+Do this **once per repo** you want reviewed (the infra in step 1 is deployed once
+per account, but each repo needs its own secret).
+
 Add a repository **secret**:
 - `AWS_REVIEW_ROLE_ARN` → the `RoleArn` from step 1.
 
+> **Lost the ARN?** It's a stack output, so you don't need to re-deploy to get it.
+> From `infra/`, reprint it any time (pass your profile/region):
+> ```bash
+> npm run show-role-arn -- --profile <your-profile> --region <your-region>
+> ```
+
 Add repository **variables** (optional; defaults shown):
 - `AWS_REGION` = `us-east-1`
-- `BEDROCK_MODEL_ID` = `anthropic.claude-sonnet-4-20250514-v1:0`
+- `BEDROCK_MODEL_ID` = `anthropic.claude-sonnet-5-5`
 
 > **Same value as the infra.** `BEDROCK_MODEL_ID` is the **base** model id —
 > the *identical* string you passed to the infra as `bedrockModelIds`. The agent
@@ -274,7 +310,7 @@ To work on the infra:
 cd infra
 npm install
 npm run typecheck        # tsc --noEmit
-npx cdk synth -c githubOwner=you -c bedrockModelIds=anthropic.claude-sonnet-4-20250514-v1:0   # preview the CloudFormation
+npx cdk synth -c githubOwner=you -c bedrockModelIds=anthropic.claude-sonnet-5-5   # preview the CloudFormation
 ```
 
 ## License

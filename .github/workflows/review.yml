@@ -99,7 +99,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: origin/${{ github.event.pull_request.base.ref }}
-          BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'anthropic.claude-sonnet-4-20250514-v1:0' }}
+          BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'anthropic.claude-sonnet-5-5' }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           MAX_ITERATIONS: "25"
           # Explicitly point the agent at the repo root (it defaults to this).

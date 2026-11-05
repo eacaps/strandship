@@ -7,17 +7,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "strandship-agent"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "strands-agents" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "strands-agents", specifier = ">=0.1.0" }]
-
-[[package]]
 name = "annotated-types"
 version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -909,6 +898,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/ab/74fc54111f3009fc5
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/85/37b156ba498cadd833c806c9fe0ef137433950219fe335f368438c65a3a2/strands_agents-1.63.0-py3-none-any.whl", hash = "sha256:fc0a140943855c0199a83fe5a78fc07f1e82ef7d60592538c2d52793121980f0", size = 972613, upload-time = "2026-10-30T19:53:35.714Z" },
 ]
+
+[[package]]
+name = "strandship-agent"
+version = "1.0.0"
+source = { editable = "." }
+dependencies = [
+    { name = "strands-agents" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "strands-agents", specifier = ">=0.1.0" }]
 
 [[package]]
 name = "truststore"

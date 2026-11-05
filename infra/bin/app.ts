@@ -10,7 +10,7 @@ const app = new App();
 //   cdk deploy --all \
 //     -c githubOwner=my-user \
 //     -c githubRepo='*' \
-//     -c bedrockModelIds=anthropic.claude-sonnet-4-20250514-v1:0
+//     -c bedrockModelIds=anthropic.claude-sonnet-5-5
 // or set defaults in cdk.json under "context".
 //
 // `bedrockModelIds` is the BASE model id (no "us." prefix). From it we derive
