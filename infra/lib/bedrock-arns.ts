@@ -1,6 +1,6 @@
 /**
  * Helpers to derive the Bedrock ARNs a cross-Region inference profile needs,
- * from a BASE foundation-model id (e.g. "anthropic.claude-sonnet-4-20250514-v1:0")
+ * from a BASE foundation-model id (e.g. "anthropic.claude-sonnet-5-5")
  * plus the deploy region/account.
  *
  * Why a set of ARNs, not one: when you invoke via a cross-Region inference
@@ -56,7 +56,7 @@ export interface DerivedBedrockArns {
 }
 
 export interface DeriveOptions {
-  /** BASE model id, e.g. "anthropic.claude-sonnet-4-20250514-v1:0". */
+  /** BASE model id, e.g. "anthropic.claude-sonnet-5-5". */
   readonly modelId: string;
   /** Deploy region (CDK `this.region`). */
   readonly region: string;

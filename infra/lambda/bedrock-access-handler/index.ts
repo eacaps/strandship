@@ -20,7 +20,7 @@
  * deliberate, documented side effect of deploying the BootstrapStack.
  *
  * The model id passed here is the BASE foundation-model id (e.g.
- * "anthropic.claude-sonnet-4-20250514-v1:0"), NOT the "us."-prefixed inference
+ * "anthropic.claude-sonnet-5-5"), NOT the "us."-prefixed inference
  * profile used at invocation time. Agreements are granted on the base model.
  */
 

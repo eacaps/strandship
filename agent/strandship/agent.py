@@ -62,7 +62,7 @@ def resolve_model_id(model_id: str, region: str) -> str:
     """Resolve the model id the agent should invoke.
 
     The canonical configured value is the BASE model id (e.g.
-    "anthropic.claude-sonnet-4-20250514-v1:0"), identical to what the infra uses.
+    "anthropic.claude-sonnet-5-5"), identical to what the infra uses.
     Cross-Region invocation requires the geo-prefixed inference-profile id
     (e.g. "us.anthropic.claude-..."), so we derive that prefix from the region —
     the same transform the infra applies when deriving the profile ARN.
@@ -307,7 +307,7 @@ def build_agent() -> Agent:
     # Resolve it to the cross-Region inference-profile id to actually invoke.
     region = os.environ.get("AWS_REGION", "us-east-1")
     base_model_id = os.environ.get(
-        "BEDROCK_MODEL_ID", "anthropic.claude-sonnet-4-20250514-v1:0"
+        "BEDROCK_MODEL_ID", "anthropic.claude-sonnet-5-5"
     )
     model = BedrockModel(
         model_id=resolve_model_id(base_model_id, region),

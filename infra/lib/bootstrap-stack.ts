@@ -10,7 +10,7 @@ import * as path from 'path';
 export interface BootstrapStackProps extends StackProps {
   /**
    * BASE foundation-model id to enable access for (NOT the "us."-prefixed
-   * inference profile). Example: "anthropic.claude-sonnet-4-20250514-v1:0".
+   * inference profile). Example: "anthropic.claude-sonnet-5-5".
    * The provider prefix selects the agreement path.
    */
   readonly bedrockModelId: string;

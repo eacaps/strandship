@@ -16,7 +16,7 @@ export interface ReviewerRoleStackProps extends StackProps {
   readonly githubRepo: string;
   /**
    * BASE foundation-model id the reviewer invokes, e.g.
-   * "anthropic.claude-sonnet-4-20250514-v1:0" (NOT the "us."-prefixed profile).
+   * "anthropic.claude-sonnet-5-5" (NOT the "us."-prefixed profile).
    * The invoke ARNs (inference profile + per-region foundation models) are
    * derived from this id plus the deploy region/account. Omit when passing
    * `bedrockModelArns` explicitly.
