@@ -10,8 +10,10 @@
     "build": "tsc",
     "watch": "tsc -w",
     "typecheck": "tsc --noEmit",
+    "bootstrap": "cdk bootstrap --app ''",
     "synth": "cdk synth",
-    "deploy": "cdk deploy"
+    "deploy": "cdk deploy",
+    "show-role-arn": "aws cloudformation describe-stacks --stack-name StrandshipRoleStack --query \"Stacks[0].Outputs[?OutputKey=='RoleArn'].OutputValue\" --output text"
   },
   "devDependencies": {
     "@aws-sdk/client-bedrock": "^3.600.0",
