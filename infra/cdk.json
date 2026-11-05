@@ -12,7 +12,6 @@
     ]
   },
   "context": {
-    "githubRepo": "*",
     "@aws-cdk/core:newStyleStackSynthesis": true
   }
 }

@@ -28,7 +28,7 @@ repo-multiplication abuse.
 
 **Verify before relying on it (region/model specific):**
 - Confirm the model is governed by **RPM** at all. Some models — including Claude
-  Sonnet 4 via the `us.`-prefixed inference profile — may be throttled primarily by
+  Sonnet via the `us.`-prefixed inference profile — may be throttled primarily by
   **TPM** (tokens/min), with RPM either absent or not adjustable. Check which quotas
   the model actually exposes in the Service Quotas console.
 - Confirm the **minimum**. RPM is (almost certainly) an **integer with a floor of 1** —

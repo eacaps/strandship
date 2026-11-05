@@ -53,28 +53,37 @@ reusable workflow published in this repo, so adopters add a ~10-line caller stub
 the agent. Depends on versioning (below) so the `@v1` ref is stable.
 
 ### Pin role trust to the reviewer workflow via `job_workflow_ref`
-The trust policy scopes `sub` to `repo:${githubOwner}/${githubRepo}:pull_request`
-(the event is now pinned — see below), and both `cdk.json` and the README default
-`githubRepo` to `*`. With `githubRepo='*'` the `sub` becomes
-`repo:<owner>/*:pull_request`, which trusts **any `pull_request`-triggered workflow in
-every repo the owner has** — not just the reviewer. The membership gate in `review.yml`
-does not help here: that gate lives in one workflow file, whereas the IAM trust policy
-is what actually governs who can assume the role.
+The trust policy scopes `sub` by OWNER only (two patterns, for GitHub's legacy and
+immutable subject formats), with the repo wildcarded and the trigger pinned via the
+`:pull_request` suffix:
+`repo:<owner>/*:pull_request` and `repo:<owner>@*/*:pull_request`. This is
+owner-wide by design (there is no `githubRepo` param — breadth is always the owner's
+namespace). It trusts **any `pull_request` workflow in any of the owner's repos** —
+not only the reviewer. The membership gate in `review.yml` does not help here: that
+gate lives in one workflow file, whereas the IAM trust policy is what actually
+governs who can assume the role.
 
-Keeping `githubRepo='*'` is a deliberate adoption choice (an adopter drops the reviewer
-into any of their repos with no per-repo redeploy), and the owner-scoped `sub` still
-confines assumption to the owner's own namespace. The residual gap is purely
-*within* that namespace: any `pull_request` workflow in any of the owner's repos — not
-only the reviewer — can assume the role. The GitHub OIDC token carries a separate
-`job_workflow_ref` claim identifying the *workflow file* that requested the token (for
-reusable workflows, the **defining** workflow, not the caller), so we can bind the role
-to *our reviewer workflow* regardless of which repo runs it — closing the residual gap
-**without** giving up the `*` convenience.
+Owner-wide is a deliberate adoption choice (drop the reviewer into any of the owner's
+repos with no per-repo redeploy), and the owner-scoped `sub` still confines assumption
+to the owner's own namespace. The residual gap is purely *within* that namespace: any
+`pull_request` workflow in any of the owner's repos — not only the reviewer — can
+assume the role. The GitHub OIDC token carries a separate `job_workflow_ref` claim
+identifying the *workflow file* that requested the token (for reusable workflows, the
+**defining** workflow, not the caller), so we can bind the role to *our reviewer
+workflow* regardless of which repo runs it — closing the residual gap **without**
+giving up the owner-wide convenience.
 
-Already shipped (partial mitigation): the trailing `:*` has been tightened to an event
-pin (`repo:<owner>/<repo>:pull_request`), so non-PR events (`push`, `workflow_dispatch`,
-tag builds) in a matched repo can no longer assume the role. `job_workflow_ref` is the
-complete fix that remains.
+Already shipped (partial mitigation): the trigger is pinned via the `sub` suffix
+(`:pull_request`), so non-PR events (`push`, `workflow_dispatch`, tag builds) in the
+owner's repos cannot assume the role. `job_workflow_ref` is the complete fix that
+remains (it pins the *workflow*, not just the event).
+
+> **Note on the event pin:** it MUST live in the `sub` suffix, NOT an `event_name`
+> condition. AWS does not support GitHub's custom OIDC claims (only `aud` and `sub`)
+> as trust-policy condition keys, so an `event_name` condition can never match and
+> denies every assume (learned the hard way). Verify whether `job_workflow_ref` is a
+> supported condition key on AWS before building the fix below — if AWS treats it as a
+> custom claim too, this approach won't work and the per-workflow lock needs rethinking.
 
 To generalize:
 - `ReviewerRoleStack`: add an optional `jobWorkflowRef` context param and, when set, add
