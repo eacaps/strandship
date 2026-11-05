@@ -95,9 +95,16 @@ export class BootstrapStack extends Stack {
       },
     });
 
+    // Explicit log group for the provider framework's Lambda. (Replaces the
+    // deprecated `logRetention` prop, which CDK warns against; `logGroup` is the
+    // supported way to control retention.)
+    const providerLogGroup = new logs.LogGroup(this, 'BedrockAccessProviderLogs', {
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
+
     const provider = new Provider(this, 'BedrockAccessProvider', {
       onEventHandler: onEvent,
-      logRetention: logs.RetentionDays.ONE_WEEK,
+      logGroup: providerLogGroup,
     });
 
     // The model id is a resource PROPERTY, so changing it triggers an update; the
